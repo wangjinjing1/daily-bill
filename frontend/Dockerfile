@@ -8,6 +8,7 @@ RUN npm install
 COPY tsconfig.json tsconfig.json
 COPY vite.config.ts vite.config.ts
 COPY index.html index.html
+COPY public public
 COPY src src
 RUN npm run build
 
@@ -17,4 +18,3 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
-
