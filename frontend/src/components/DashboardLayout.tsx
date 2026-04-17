@@ -89,15 +89,16 @@ export function DashboardLayout({ children }: PropsWithChildren) {
             )}
             <div className="header-user">
               <Avatar>{user?.username?.slice(0, 1).toUpperCase()}</Avatar>
-              <div>
+              <div className="header-user-text">
                 <Typography.Text strong>{user?.username}</Typography.Text>
                 <Typography.Text type="secondary">{user?.role === "SUPER_ADMIN" ? "超级管理员" : "普通用户"}</Typography.Text>
               </div>
             </div>
           </Space>
-          <Space>
+          <Space size={8} className="header-actions">
             <Button
               icon={<LockOutlined />}
+              size={isMobile ? "small" : "middle"}
               onClick={() => {
                 passwordForm.resetFields();
                 setPasswordOpen(true);
@@ -107,6 +108,7 @@ export function DashboardLayout({ children }: PropsWithChildren) {
             </Button>
             <Button
               icon={<LogoutOutlined />}
+              size={isMobile ? "small" : "middle"}
               onClick={() => {
                 logout();
                 navigate("/login");
