@@ -66,10 +66,21 @@ body {
   display: flex;
   gap: 12px;
   align-items: center;
+  min-width: 0;
 }
 
 .header-user .ant-typography {
   display: block;
+}
+
+.header-user-text {
+  min-width: 0;
+}
+
+.header-user-text .ant-typography {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-content {
@@ -107,6 +118,13 @@ body {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.mobile-date-range {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  width: 100%;
 }
 
 .range-picker {
@@ -151,6 +169,8 @@ body {
     margin: 12px 12px 0;
     padding: 12px 16px;
     height: auto;
+    gap: 10px;
+    align-items: flex-start;
   }
 
   .app-content {
@@ -159,11 +179,17 @@ body {
 
   .header-user {
     gap: 10px;
-    min-width: 0;
+    flex: 1;
   }
 
-  .header-user > div {
-    max-width: 120px;
+  .header-user-text {
+    max-width: 96px;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 132px;
   }
 
   .page-card {
@@ -179,6 +205,10 @@ body {
   .query-bar {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .mobile-date-range .ant-picker {
+    width: 100%;
   }
 
   .range-picker {

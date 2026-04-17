@@ -45,6 +45,36 @@ function getDefaultRange(): [Dayjs, Dayjs] {
   return [dayjs().subtract(1, "month").startOf("month"), dayjs().subtract(1, "month").endOf("month")];
 }
 
+function MobileDateRange({
+  value,
+  onChange,
+  placeholders
+}: {
+  value: [Dayjs | null, Dayjs | null] | null;
+  onChange: (next: [Dayjs | null, Dayjs | null] | null) => void;
+  placeholders: [string, string];
+}) {
+  const start = value?.[0] ?? null;
+  const end = value?.[1] ?? null;
+
+  return (
+    <div className="mobile-date-range">
+      <DatePicker
+        value={start}
+        placeholder={placeholders[0]}
+        style={{ width: "100%" }}
+        onChange={(next) => onChange([next, end])}
+      />
+      <DatePicker
+        value={end}
+        placeholder={placeholders[1]}
+        style={{ width: "100%" }}
+        onChange={(next) => onChange([start, next])}
+      />
+    </div>
+  );
+}
+
 export function LedgerPage() {
   const [form] = Form.useForm();
   const screens = Grid.useBreakpoint();
@@ -192,7 +222,19 @@ export function LedgerPage() {
             <Typography.Text type="secondary">支持按日期和记账类型查询，按日期倒序分页展示。</Typography.Text>
           </div>
           <div className="ledger-actions">
-            <DatePicker.RangePicker value={range} className="range-picker" onChange={(value) => value && setRange(value as [Dayjs, Dayjs])} />
+            {isMobile ? (
+              <MobileDateRange
+                value={range}
+                placeholders={["导出开始日期", "导出结束日期"]}
+                onChange={(value) => {
+                  if (value?.[0] && value?.[1]) {
+                    setRange([value[0], value[1]]);
+                  }
+                }}
+              />
+            ) : (
+              <DatePicker.RangePicker value={range} className="range-picker" onChange={(value) => value && setRange(value as [Dayjs, Dayjs])} />
+            )}
             <Button block={isMobile} onClick={() => void exportFile("transactions")}>
               导出流水
             </Button>
@@ -208,7 +250,15 @@ export function LedgerPage() {
 
       <Card className="page-card">
         <div className="query-bar">
-          <DatePicker.RangePicker value={queryDates} className="range-picker" onChange={(value) => setQueryDates((value as [Dayjs | null, Dayjs | null]) ?? null)} />
+          {isMobile ? (
+            <MobileDateRange
+              value={queryDates}
+              placeholders={["开始日期", "结束日期"]}
+              onChange={(value) => setQueryDates(value)}
+            />
+          ) : (
+            <DatePicker.RangePicker value={queryDates} className="range-picker" onChange={(value) => setQueryDates((value as [Dayjs | null, Dayjs | null]) ?? null)} />
+          )}
           <Select
             allowClear
             placeholder="按记账类型筛选"
