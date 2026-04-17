@@ -1,0 +1,21 @@
+services:
+  backend:
+    image: wangjinjing/daily-bill-backend:latest
+    container_name: daily-bill-backend
+    restart: unless-stopped
+    env_file:
+      - ./.env.example
+    environment:
+      PORT: 13101
+      CORS_ORIGIN: http://localhost:15172
+    ports:
+      - "13101:13101"
+
+  frontend:
+    image: wangjinjing/daily-bill-frontend:latest
+    container_name: daily-bill-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "15172:80"

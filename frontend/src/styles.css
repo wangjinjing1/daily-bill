@@ -1,0 +1,179 @@
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(24, 111, 101, 0.16), transparent 30%),
+    linear-gradient(135deg, #f5f3eb 0%, #f4fbf8 55%, #edf6f3 100%);
+  font-family: "Segoe UI", "PingFang SC", sans-serif;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-sider {
+  background: linear-gradient(180deg, #14342f 0%, #1e4c45 100%) !important;
+  color: #fff;
+  padding: 20px 14px;
+}
+
+.brand-block {
+  color: #fff;
+  margin-bottom: 24px;
+  padding: 8px 8px 16px;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+.brand-block .ant-typography,
+.brand-block .ant-typography-secondary {
+  color: #fff;
+}
+
+.side-menu {
+  background: transparent !important;
+  border-inline-end: none !important;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  margin: 16px 16px 0;
+  border-radius: 20px;
+  padding: 0 20px;
+}
+
+.header-user {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.header-user .ant-typography {
+  display: block;
+}
+
+.app-content {
+  padding: 16px;
+}
+
+.menu-trigger {
+  color: #14342f;
+}
+
+.page-card {
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(30, 76, 69, 0.08);
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ledger-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.range-picker {
+  min-width: 280px;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 420px;
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgba(20, 52, 47, 0.16);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.login-brand-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  flex: 0 0 auto;
+  box-shadow: 0 18px 34px rgba(20, 52, 47, 0.18);
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    margin: 12px 12px 0;
+    padding: 12px 16px;
+    height: auto;
+  }
+
+  .app-content {
+    padding: 12px;
+  }
+
+  .header-user {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .header-user > div {
+    max-width: 120px;
+  }
+
+  .page-card {
+    border-radius: 18px;
+  }
+
+  .ledger-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .range-picker {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .login-card {
+    width: 100%;
+  }
+
+  .login-brand {
+    align-items: flex-start;
+  }
+}
