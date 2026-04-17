@@ -1,11 +1,15 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="512" height="512" rx="128" fill="url(#bg)" />
-  <rect x="40" y="40" width="432" height="432" rx="108" fill="white" fill-opacity="0.08" />
-  <text x="256" y="295" text-anchor="middle" fill="white" font-size="104" font-family="Segoe UI, Arial, sans-serif" font-weight="700" letter-spacing="-6">Bill</text>
+  <rect x="92" y="84" width="328" height="344" rx="44" fill="white" fill-opacity="0.12" />
+  <rect x="116" y="108" width="280" height="296" rx="34" fill="white" />
+  <rect x="156" y="154" width="150" height="34" rx="17" fill="#DCEEEA" />
+  <rect x="156" y="214" width="200" height="22" rx="11" fill="#DCEEEA" />
+  <rect x="156" y="256" width="176" height="22" rx="11" fill="#DCEEEA" />
+  <path d="M174 332V182H251C286.899 182 312 200.835 312 230C312 247.849 302.323 261.733 285.682 270.3C308.735 278.078 322 294.28 322 315C322 349.575 293.921 372 252 372H174V332ZM216 255H246.5C261.24 255 270 246.717 270 234C270 221.283 261.24 213 246.5 213H216V255ZM216 341H251.5C268.703 341 279 331.827 279 317C279 302.173 268.703 293 251.5 293H216V341Z" fill="#1F6F66"/>
   <defs>
-    <linearGradient id="bg" x1="74" y1="58" x2="430" y2="470" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#184E48" />
-      <stop offset="1" stop-color="#2C877C" />
+    <linearGradient id="bg" x1="64" y1="40" x2="438" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#174A45" />
+      <stop offset="1" stop-color="#2F8A7E" />
     </linearGradient>
   </defs>
 </svg>

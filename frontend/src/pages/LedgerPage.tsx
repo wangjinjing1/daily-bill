@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -58,6 +58,8 @@ export function LedgerPage() {
   const [submitting, setSubmitting] = useState(false);
   const [editingEntry, setEditingEntry] = useState<BillEntry | null>(null);
   const [range, setRange] = useState<[Dayjs, Dayjs]>(getDefaultRange());
+  const [queryTypeId, setQueryTypeId] = useState<number | undefined>();
+  const [queryDates, setQueryDates] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   const loadTypes = async () => {
     const response = await api.get<BillType[]>("/types");
@@ -68,7 +70,13 @@ export function LedgerPage() {
     setLoading(true);
     try {
       const response = await api.get<LedgerResponse>("/bills", {
-        params: { page: targetPage, pageSize: targetPageSize }
+        params: {
+          page: targetPage,
+          pageSize: targetPageSize,
+          typeId: queryTypeId,
+          startDate: queryDates?.[0]?.format("YYYY-MM-DD"),
+          endDate: queryDates?.[1]?.format("YYYY-MM-DD")
+        }
       });
       setData(response.data);
     } finally {
@@ -181,14 +189,10 @@ export function LedgerPage() {
         <div className="page-head">
           <div>
             <Typography.Title level={3}>账单流水</Typography.Title>
-            <Typography.Text type="secondary">按日期倒序查看个人记账明细，支持分页、编辑、删除和导出。</Typography.Text>
+            <Typography.Text type="secondary">支持按日期和记账类型查询，按日期倒序分页展示。</Typography.Text>
           </div>
           <div className="ledger-actions">
-            <DatePicker.RangePicker
-              value={range}
-              className="range-picker"
-              onChange={(value) => value && setRange(value as [Dayjs, Dayjs])}
-            />
+            <DatePicker.RangePicker value={range} className="range-picker" onChange={(value) => value && setRange(value as [Dayjs, Dayjs])} />
             <Button block={isMobile} onClick={() => void exportFile("transactions")}>
               导出流水
             </Button>
@@ -203,6 +207,40 @@ export function LedgerPage() {
       </Card>
 
       <Card className="page-card">
+        <div className="query-bar">
+          <DatePicker.RangePicker value={queryDates} className="range-picker" onChange={(value) => setQueryDates((value as [Dayjs | null, Dayjs | null]) ?? null)} />
+          <Select
+            allowClear
+            placeholder="按记账类型筛选"
+            className="query-select"
+            value={queryTypeId}
+            onChange={(value) => setQueryTypeId(value)}
+            options={types.filter((item) => item.enabled).map((item) => ({ label: item.name, value: item.id }))}
+          />
+          <Button
+            type="primary"
+            icon={<SearchOutlined />}
+            onClick={async () => {
+              setPage(1);
+              await loadBills(1, pageSize);
+            }}
+          >
+            查询
+          </Button>
+          <Button
+            onClick={async () => {
+              setQueryDates(null);
+              setQueryTypeId(undefined);
+              setPage(1);
+              setTimeout(() => {
+                void loadBills(1, pageSize);
+              }, 0);
+            }}
+          >
+            重置
+          </Button>
+        </div>
+
         <Table
           rowKey="id"
           loading={loading}
@@ -271,17 +309,9 @@ export function LedgerPage() {
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item label="记账类型" name="billTypeId" rules={[{ required: true, message: "请选择记账类型" }]}>
-            <Select
-              placeholder="请选择记账类型"
-              options={types.filter((item) => item.enabled).map((item) => ({ label: item.name, value: item.id }))}
-            />
+            <Select placeholder="请选择记账类型" options={types.filter((item) => item.enabled).map((item) => ({ label: item.name, value: item.id }))} />
           </Form.Item>
-          <Form.Item
-            label="金额(元)"
-            name="amount"
-            rules={[{ required: true, message: "请输入金额" }]}
-            extra="仅允许输入数字，单位为元"
-          >
+          <Form.Item label="金额(元)" name="amount" rules={[{ required: true, message: "请输入金额" }]} extra="仅允许输入数字，单位为元">
             <InputNumber min={0} precision={2} style={{ width: "100%" }} placeholder="请输入金额" />
           </Form.Item>
           <Form.Item label="备注" name="note">

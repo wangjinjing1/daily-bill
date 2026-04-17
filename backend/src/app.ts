@@ -112,6 +112,44 @@ app.get(
   })
 );
 
+app.post(
+  "/api/me/change-password",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const currentUser = (req as express.Request & { user: RequestUser }).user;
+    const oldPassword = String(req.body?.oldPassword ?? "");
+    const newPassword = String(req.body?.newPassword ?? "");
+
+    if (!oldPassword || !newPassword) {
+      res.status(400).json({ message: "请输入原密码和新密码" });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({ message: "新密码至少 6 位" });
+      return;
+    }
+
+    const user = await User.findByPk(currentUser.id);
+    if (!user) {
+      res.status(404).json({ message: "用户不存在" });
+      return;
+    }
+
+    const matched = await comparePassword(oldPassword, user.passwordHash);
+    if (!matched) {
+      res.status(400).json({ message: "原密码错误" });
+      return;
+    }
+
+    await user.update({
+      passwordHash: await hashPassword(newPassword)
+    });
+
+    res.json({ success: true });
+  })
+);
+
 app.get(
   "/api/types",
   requireAuth,
@@ -203,9 +241,24 @@ app.get(
     const page = Math.max(Number(req.query.page ?? 1), 1);
     const pageSize = Math.min(Math.max(Number(req.query.pageSize ?? 10), 1), 100);
     const typeId = req.query.typeId ? Number(req.query.typeId) : undefined;
+    const startDate = req.query.startDate ? String(req.query.startDate) : undefined;
+    const endDate = req.query.endDate ? String(req.query.endDate) : undefined;
     const where: Record<string, unknown> = { userId: user.id };
     if (typeId) {
       where.billTypeId = typeId;
+    }
+    if (startDate && endDate) {
+      where.occurredOn = {
+        [Op.between]: [assertDate(startDate), assertDate(endDate)]
+      };
+    } else if (startDate) {
+      where.occurredOn = {
+        [Op.gte]: assertDate(startDate)
+      };
+    } else if (endDate) {
+      where.occurredOn = {
+        [Op.lte]: assertDate(endDate)
+      };
     }
 
     const { rows, count } = await BillEntry.findAndCountAll({

@@ -24,7 +24,7 @@ export function LoginPage() {
     <div className="login-page">
       <Card className="login-card">
         <div className="login-brand">
-          <img src="/bill-icon.svg" alt="Bill" className="login-brand-icon" />
+          <img src="/bill-mark.png" alt="Bill" className="login-brand-icon" />
           <div>
             <Typography.Title level={2}>Bill</Typography.Title>
             <Typography.Paragraph type="secondary">登录后查看账单流水并导出报表。</Typography.Paragraph>

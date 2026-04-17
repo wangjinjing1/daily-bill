@@ -27,5 +27,5 @@ export const config = {
   jwtSecret: requireEnv("JWT_SECRET"),
   superAdminUsername: requireEnv("SUPER_ADMIN_USERNAME", "admin"),
   superAdminPassword: requireEnv("SUPER_ADMIN_PASSWORD", "admin123456"),
-  corsOrigin: requireEnv("CORS_ORIGIN", "http://localhost:5173")
+  corsOrigin: requireEnv("CORS_ORIGIN", "http://localhost:15172")
 };
