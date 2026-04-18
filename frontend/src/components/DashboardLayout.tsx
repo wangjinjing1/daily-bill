@@ -9,7 +9,7 @@ import {
 import { Avatar, Button, Drawer, Form, Grid, Input, Layout, Menu, Modal, Space, Typography, message } from "antd";
 import { PropsWithChildren, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { api } from "../api";
+import { api, getApiErrorMessage } from "../api";
 import { useAuth } from "../auth";
 
 const { Header, Sider, Content } = Layout;
@@ -71,9 +71,9 @@ export function DashboardLayout({ children }: PropsWithChildren) {
         <Sider width={220} className="app-sider">
           <div className="brand-block">
             <div className="brand-mark">
-              <img src="/bill-mark.png" alt="Bill" className="brand-icon" />
+              <img src="/bill-mark.png" alt="每日记账" className="brand-icon" />
               <div>
-                <Typography.Title level={3}>Bill</Typography.Title>
+                <Typography.Title level={3}>每日记账</Typography.Title>
                 <Typography.Text>账单管理</Typography.Text>
               </div>
             </div>
@@ -121,7 +121,7 @@ export function DashboardLayout({ children }: PropsWithChildren) {
         <Content className="app-content">{children}</Content>
       </Layout>
 
-      <Drawer title="Bill" placement="left" open={drawerOpen} onClose={() => setDrawerOpen(false)} className="mobile-drawer">
+      <Drawer title="每日记账" placement="left" open={drawerOpen} onClose={() => setDrawerOpen(false)} className="mobile-drawer">
         <Typography.Paragraph type="secondary">账单管理</Typography.Paragraph>
         {sideMenu}
       </Drawer>
@@ -146,7 +146,7 @@ export function DashboardLayout({ children }: PropsWithChildren) {
               message.success("密码修改成功");
               setPasswordOpen(false);
             } catch (error: unknown) {
-              message.error(getErrorMessage(error));
+              message.error(getApiErrorMessage(error));
             } finally {
               setPasswordSubmitting(false);
             }

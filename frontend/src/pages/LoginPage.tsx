@@ -1,6 +1,7 @@
 import { Button, Card, Form, Input, Typography, message } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getApiErrorMessage } from "../api";
 import { useAuth } from "../auth";
 
 function getErrorMessage(error: unknown) {
@@ -24,9 +25,9 @@ export function LoginPage() {
     <div className="login-page">
       <Card className="login-card">
         <div className="login-brand">
-          <img src="/bill-mark.png" alt="Bill" className="login-brand-icon" />
+          <img src="/bill-mark.png" alt="每日记账" className="login-brand-icon" />
           <div>
-            <Typography.Title level={2}>Bill</Typography.Title>
+            <Typography.Title level={2}>每日记账</Typography.Title>
             <Typography.Paragraph type="secondary">登录后查看账单流水并导出报表。</Typography.Paragraph>
           </div>
         </div>
@@ -39,7 +40,7 @@ export function LoginPage() {
               message.success("登录成功");
               navigate("/ledger", { replace: true });
             } catch (error: unknown) {
-              message.error(getErrorMessage(error));
+              message.error(getApiErrorMessage(error));
             } finally {
               setSubmitting(false);
             }

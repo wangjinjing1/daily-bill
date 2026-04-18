@@ -7,7 +7,7 @@ echo Daily Bill Android APK Release Build
 echo ============================================
 echo.
 echo Please enter your backend API URL.
-echo Example: http://192.168.1.10:13101/api
+echo Example: 请输入自己的后端服务地址
 echo.
 set /p API_URL=Enter API URL: 
 

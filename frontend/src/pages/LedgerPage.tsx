@@ -20,6 +20,8 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs, { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { exportFilePlugin } from "../exportFilePlugin";
+import { isNativeApp } from "../native";
 import { BillEntry, BillType } from "../types";
 
 type LedgerResponse = {
@@ -73,6 +75,50 @@ function MobileDateRange({
       />
     </div>
   );
+}
+
+async function blobToBase64(blob: Blob) {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Failed to read file"));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"));
+    reader.readAsDataURL(blob);
+  });
+
+  return dataUrl.split(",", 2)[1] ?? "";
+}
+
+async function exportBlob(blob: Blob, filename: string) {
+  if (isNativeApp()) {
+    const base64 = await blobToBase64(blob);
+    await exportFilePlugin.saveBase64File({
+      filename,
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      base64
+    });
+    message.success(`已保存到下载目录：${filename}`);
+    return;
+  }
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  window.setTimeout(() => {
+    window.URL.revokeObjectURL(url);
+  }, 1000);
+  message.success(`已开始下载：${filename}`);
 }
 
 export function LedgerPage() {
@@ -195,19 +241,14 @@ export function LedgerPage() {
         return;
       }
 
-      const response = await api.get(`/bills/export/${type}`, {
+      const response = await api.get<Blob>(`/bills/export/${type}`, {
         params: {
           startDate: start.format("YYYY-MM-DD"),
           endDate: end.format("YYYY-MM-DD")
         },
         responseType: "blob"
       });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${type}-${start.format("YYYYMMDD")}-${end.format("YYYYMMDD")}.xlsx`;
-      link.click();
-      window.URL.revokeObjectURL(url);
+      await exportBlob(response.data, `${type}-${start.format("YYYYMMDD")}-${end.format("YYYYMMDD")}.xlsx`);
     } catch (error: unknown) {
       message.error(getErrorMessage(error));
     }
