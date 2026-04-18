@@ -24,6 +24,10 @@ type ApiErrorShape = Error & {
   };
 };
 
+const NETWORK_ERROR_MESSAGE =
+  "\u65e0\u6cd5\u8fde\u63a5\u5230\u670d\u52a1\u5668\uff0c\u8bf7\u786e\u8ba4\u540e\u7aef\u670d\u52a1\u5df2\u542f\u52a8\u5e76\u91cd\u8bd5";
+const UNKNOWN_ERROR_MESSAGE = "\u64cd\u4f5c\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5";
+
 function buildHeaders() {
   const headers: Record<string, string> = {};
   const token = localStorage.getItem(tokenKey);
@@ -212,8 +216,8 @@ export function getApiErrorMessage(error: unknown) {
       return responseMessage;
     }
 
-    if (error.code === "ERR_NETWORK") {
-      return "鏃犳硶杩炴帴鏈嶅姟鍣紝璇锋鏌ユ帴鍙ｅ湴鍧€銆佸悗绔湇鍔″拰璇佷功閰嶇疆";
+    if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+      return NETWORK_ERROR_MESSAGE;
     }
 
     if (error.message) {
@@ -228,8 +232,8 @@ export function getApiErrorMessage(error: unknown) {
       return responseMessage;
     }
 
-    if (nativeError.code === "ERR_NETWORK") {
-      return "鏃犳硶杩炴帴鏈嶅姟鍣紝璇锋鏌ユ帴鍙ｅ湴鍧€銆佸悗绔湇鍔″拰璇佷功閰嶇疆";
+    if (nativeError.code === "ERR_NETWORK" || nativeError.message === "Network Error") {
+      return NETWORK_ERROR_MESSAGE;
     }
 
     if (nativeError.message) {
@@ -237,5 +241,5 @@ export function getApiErrorMessage(error: unknown) {
     }
   }
 
-  return "鎿嶄綔澶辫触";
+  return UNKNOWN_ERROR_MESSAGE;
 }
