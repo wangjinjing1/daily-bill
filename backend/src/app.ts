@@ -5,7 +5,7 @@ import { comparePassword, hashPassword, signToken, verifyToken } from "./auth.js
 import { config } from "./config.js";
 import { buildSummaryWorkbook, buildTransactionWorkbook } from "./export.js";
 import { BillEntry, BillType, User } from "./models.js";
-import { assertAmount, assertDate, assertRangeWithinMonth } from "./utils.js";
+import { assertAmount, assertCycleDay, assertDate, resolveExportRange } from "./utils.js";
 
 export const app = express();
 
@@ -87,7 +87,11 @@ app.post(
       user: {
         id: user.id,
         username: user.username,
-        role: user.role
+        role: user.role,
+        status: user.status,
+        exportCycleDay: user.exportCycleDay,
+        exportStartDate: user.exportStartDate,
+        exportEndDate: user.exportEndDate
       }
     });
   })
@@ -107,7 +111,37 @@ app.get(
       id: user.id,
       username: user.username,
       role: user.role,
-      status: user.status
+      status: user.status,
+      exportCycleDay: user.exportCycleDay,
+      exportStartDate: user.exportStartDate,
+      exportEndDate: user.exportEndDate
+    });
+  })
+);
+
+app.put(
+  "/api/me/export-range",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const currentUser = (req as express.Request & { user: RequestUser }).user;
+    const user = await User.findByPk(currentUser.id);
+    if (!user) {
+      res.status(404).json({ message: "用户不存在" });
+      return;
+    }
+
+    const exportCycleDay = req.body?.exportCycleDay == null || req.body?.exportCycleDay === "" ? null : assertCycleDay(req.body.exportCycleDay);
+
+    await user.update({ exportCycleDay });
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      status: user.status,
+      exportCycleDay: user.exportCycleDay,
+      exportStartDate: user.exportStartDate,
+      exportEndDate: user.exportEndDate
     });
   })
 );
@@ -366,9 +400,11 @@ app.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const user = (req as express.Request & { user: RequestUser }).user;
-    const { start, end } = assertRangeWithinMonth(
+    const currentUser = await User.findByPk(user.id);
+    const { start, end } = resolveExportRange(
       req.query.startDate as string | undefined,
-      req.query.endDate as string | undefined
+      req.query.endDate as string | undefined,
+      currentUser?.exportCycleDay ?? null
     );
 
     const entries = await BillEntry.findAll({
@@ -392,9 +428,11 @@ app.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const user = (req as express.Request & { user: RequestUser }).user;
-    const { start, end } = assertRangeWithinMonth(
+    const currentUser = await User.findByPk(user.id);
+    const { start, end } = resolveExportRange(
       req.query.startDate as string | undefined,
-      req.query.endDate as string | undefined
+      req.query.endDate as string | undefined,
+      currentUser?.exportCycleDay ?? null
     );
 
     const entries = await BillEntry.findAll({
@@ -448,7 +486,7 @@ app.post(
     });
 
     await BillType.bulkCreate([
-      { userId: user.id, name: "餐饮", sortOrder: 1, enabled: true },
+      { userId: user.id, name: "饮食", sortOrder: 1, enabled: true },
       { userId: user.id, name: "交通", sortOrder: 2, enabled: true },
       { userId: user.id, name: "日用", sortOrder: 3, enabled: true }
     ]);
@@ -457,7 +495,10 @@ app.post(
       id: user.id,
       username: user.username,
       role: user.role,
-      status: user.status
+      status: user.status,
+      exportCycleDay: user.exportCycleDay,
+      exportStartDate: user.exportStartDate,
+      exportEndDate: user.exportEndDate
     });
   })
 );
