@@ -1,5 +1,33 @@
+import { DataTypes } from "sequelize";
 import { hashPassword } from "./auth.js";
+import { sequelize } from "./db.js";
 import { BillType, User } from "./models.js";
+
+export async function ensureUserExportRangeColumns() {
+  const queryInterface = sequelize.getQueryInterface();
+  const table = await queryInterface.describeTable("users");
+
+  if (!("exportStartDate" in table)) {
+    await queryInterface.addColumn("users", "exportStartDate", {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    });
+  }
+
+  if (!("exportEndDate" in table)) {
+    await queryInterface.addColumn("users", "exportEndDate", {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    });
+  }
+
+  if (!("exportCycleDay" in table)) {
+    await queryInterface.addColumn("users", "exportCycleDay", {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true
+    });
+  }
+}
 
 export async function ensureSuperAdmin(username: string, password: string) {
   const existing = await User.findOne({ where: { username } });
@@ -14,7 +42,7 @@ export async function ensureSuperAdmin(username: string, password: string) {
     });
 
     await BillType.bulkCreate([
-      { userId: user.id, name: "餐饮", sortOrder: 1, enabled: true },
+      { userId: user.id, name: "饮食", sortOrder: 1, enabled: true },
       { userId: user.id, name: "交通", sortOrder: 2, enabled: true },
       { userId: user.id, name: "日用", sortOrder: 3, enabled: true }
     ]);

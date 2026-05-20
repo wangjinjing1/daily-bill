@@ -10,6 +10,9 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare passwordHash: string;
   declare role: UserRole;
   declare status: UserStatus;
+  declare exportStartDate: string | null;
+  declare exportEndDate: string | null;
+  declare exportCycleDay: number | null;
 }
 
 User.init(
@@ -37,6 +40,18 @@ User.init(
       type: DataTypes.ENUM("ENABLED", "DISABLED"),
       allowNull: false,
       defaultValue: "ENABLED"
+    },
+    exportStartDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    exportEndDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    exportCycleDay: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true
     }
   },
   {

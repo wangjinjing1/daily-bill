@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SettingOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -18,17 +18,22 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { Dayjs } from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { useAuth } from "../auth";
 import { exportFilePlugin } from "../exportFilePlugin";
 import { isNativeApp } from "../native";
-import { BillEntry, BillType } from "../types";
+import { BillEntry, BillType, User } from "../types";
 
 type LedgerResponse = {
   items: BillEntry[];
   total: number;
   page: number;
   pageSize: number;
+};
+
+type ExportRangeForm = {
+  exportCycleDay?: number;
 };
 
 function getErrorMessage(error: unknown) {
@@ -47,6 +52,25 @@ function getDefaultRange(): [Dayjs, Dayjs] {
   return [dayjs().subtract(1, "month").startOf("month"), dayjs().subtract(1, "month").endOf("month")];
 }
 
+function getExportRangeFromUser(user?: User | null): [Dayjs, Dayjs] | null {
+  if (!user?.exportCycleDay) {
+    return null;
+  }
+
+  const cycleDay = user.exportCycleDay;
+  const today = dayjs();
+  const currentCycleDay = today.startOf("month").date(Math.min(cycleDay, today.daysInMonth()));
+  const previousMonth = today.subtract(1, "month");
+  const previousCycleDay = previousMonth.startOf("month").date(Math.min(cycleDay, previousMonth.daysInMonth()));
+  const end = today.isBefore(currentCycleDay, "day") ? today : currentCycleDay;
+  const start = previousCycleDay.add(1, "day");
+  if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
+    return null;
+  }
+
+  return [start, end];
+}
+
 function MobileDateRange({
   value,
   onChange,
@@ -61,18 +85,8 @@ function MobileDateRange({
 
   return (
     <div className="mobile-date-range">
-      <DatePicker
-        value={start}
-        placeholder={placeholders[0]}
-        style={{ width: "100%" }}
-        onChange={(next) => onChange([next, end])}
-      />
-      <DatePicker
-        value={end}
-        placeholder={placeholders[1]}
-        style={{ width: "100%" }}
-        onChange={(next) => onChange([start, next])}
-      />
+      <DatePicker value={start} placeholder={placeholders[0]} style={{ width: "100%" }} onChange={(next) => onChange([next, end])} />
+      <DatePicker value={end} placeholder={placeholders[1]} style={{ width: "100%" }} onChange={(next) => onChange([start, next])} />
     </div>
   );
 }
@@ -123,6 +137,8 @@ async function exportBlob(blob: Blob, filename: string) {
 
 export function LedgerPage() {
   const [form] = Form.useForm();
+  const [exportRangeForm] = Form.useForm<ExportRangeForm>();
+  const { user, refreshUser } = useAuth();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [types, setTypes] = useState<BillType[]>([]);
@@ -136,6 +152,14 @@ export function LedgerPage() {
   const [range, setRange] = useState<[Dayjs, Dayjs]>(getDefaultRange());
   const [queryTypeId, setQueryTypeId] = useState<number | undefined>();
   const [queryDates, setQueryDates] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [exportSettingsOpen, setExportSettingsOpen] = useState(false);
+  const [savingExportSettings, setSavingExportSettings] = useState(false);
+
+  const enabledTypes = useMemo(() => types.filter((item) => item.enabled), [types]);
+  const preferredBillTypeId = useMemo(() => {
+    const foodType = enabledTypes.find((item) => item.name === "饮食" || item.name === "餐饮");
+    return foodType?.id;
+  }, [enabledTypes]);
 
   const loadTypes = async () => {
     const response = await api.get<BillType[]>("/types");
@@ -162,16 +186,27 @@ export function LedgerPage() {
 
   useEffect(() => {
     void loadTypes();
-  }, []);
+    void refreshUser();
+  }, [refreshUser]);
 
   useEffect(() => {
     void loadBills(page, pageSize);
   }, [page, pageSize]);
 
+  useEffect(() => {
+    const userRange = getExportRangeFromUser(user);
+    setRange(userRange ?? getDefaultRange());
+  }, [user?.exportCycleDay]);
+
   const openCreateModal = () => {
     setEditingEntry(null);
     form.resetFields();
-    form.setFieldsValue({ occurredOn: dayjs(), amount: undefined, note: "" });
+    form.setFieldsValue({
+      occurredOn: dayjs(),
+      billTypeId: preferredBillTypeId,
+      amount: undefined,
+      note: ""
+    });
     setModalOpen(true);
   };
 
@@ -184,6 +219,13 @@ export function LedgerPage() {
       note: entry.note ?? ""
     });
     setModalOpen(true);
+  };
+
+  const openExportSettings = () => {
+    exportRangeForm.setFieldsValue({
+      exportCycleDay: user?.exportCycleDay ?? undefined
+    });
+    setExportSettingsOpen(true);
   };
 
   const columns: ColumnsType<BillEntry> = [
@@ -236,11 +278,6 @@ export function LedgerPage() {
   const exportFile = async (type: "transactions" | "summary") => {
     try {
       const [start, end] = range;
-      if (end.diff(start, "day") > 31) {
-        message.error("导出时间范围不能超过一个月");
-        return;
-      }
-
       const response = await api.get<Blob>(`/bills/export/${type}`, {
         params: {
           startDate: start.format("YYYY-MM-DD"),
@@ -260,7 +297,7 @@ export function LedgerPage() {
         <div className="page-head">
           <div>
             <Typography.Title level={3}>账单流水</Typography.Title>
-            <Typography.Text type="secondary">支持按日期和记账类型查询，按日期倒序分页展示。</Typography.Text>
+            <Typography.Text type="secondary">支持按日期和记账类型查询，导出范围可按用户单独设置默认值。</Typography.Text>
           </div>
           <div className="ledger-actions">
             {isMobile ? (
@@ -276,6 +313,9 @@ export function LedgerPage() {
             ) : (
               <DatePicker.RangePicker value={range} className="range-picker" onChange={(value) => value && setRange(value as [Dayjs, Dayjs])} />
             )}
+            <Button block={isMobile} icon={<SettingOutlined />} onClick={openExportSettings}>
+              导出默认范围
+            </Button>
             <Button block={isMobile} onClick={() => void exportFile("transactions")}>
               导出流水
             </Button>
@@ -292,11 +332,7 @@ export function LedgerPage() {
       <Card className="page-card">
         <div className="query-bar">
           {isMobile ? (
-            <MobileDateRange
-              value={queryDates}
-              placeholders={["开始日期", "结束日期"]}
-              onChange={(value) => setQueryDates(value)}
-            />
+            <MobileDateRange value={queryDates} placeholders={["开始日期", "结束日期"]} onChange={(value) => setQueryDates(value)} />
           ) : (
             <DatePicker.RangePicker value={queryDates} className="range-picker" onChange={(value) => setQueryDates((value as [Dayjs | null, Dayjs | null]) ?? null)} />
           )}
@@ -306,7 +342,7 @@ export function LedgerPage() {
             className="query-select"
             value={queryTypeId}
             onChange={(value) => setQueryTypeId(value)}
-            options={types.filter((item) => item.enabled).map((item) => ({ label: item.name, value: item.id }))}
+            options={enabledTypes.map((item) => ({ label: item.name, value: item.id }))}
           />
           <Button
             type="primary"
@@ -400,13 +436,85 @@ export function LedgerPage() {
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item label="记账类型" name="billTypeId" rules={[{ required: true, message: "请选择记账类型" }]}>
-            <Select placeholder="请选择记账类型" options={types.filter((item) => item.enabled).map((item) => ({ label: item.name, value: item.id }))} />
+            <Select placeholder="请选择记账类型" options={enabledTypes.map((item) => ({ label: item.name, value: item.id }))} />
           </Form.Item>
           <Form.Item label="金额(元)" name="amount" rules={[{ required: true, message: "请输入金额" }]} extra="仅允许输入数字，单位为元">
             <InputNumber min={0} precision={2} style={{ width: "100%" }} placeholder="请输入金额" />
           </Form.Item>
           <Form.Item label="备注" name="note">
             <Input.TextArea rows={4} maxLength={255} placeholder="可填写备注" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="设置默认导出范围"
+        open={exportSettingsOpen}
+        onCancel={() => setExportSettingsOpen(false)}
+        onOk={() => exportRangeForm.submit()}
+        confirmLoading={savingExportSettings}
+        width={isMobile ? "calc(100vw - 24px)" : 520}
+        footer={(_, { OkBtn, CancelBtn }) => (
+          <>
+            <Button
+              onClick={async () => {
+                try {
+                  setSavingExportSettings(true);
+                  await api.put<User>("/me/export-range", {
+                    exportCycleDay: null
+                  });
+                  setRange(getDefaultRange());
+                  exportRangeForm.resetFields();
+                  setExportSettingsOpen(false);
+                  message.success("已恢复默认导出范围");
+                  await refreshUser();
+                } catch (error: unknown) {
+                  message.error(getErrorMessage(error));
+                } finally {
+                  setSavingExportSettings(false);
+                }
+              }}
+            >
+              恢复默认
+            </Button>
+            <CancelBtn />
+            <OkBtn />
+          </>
+        )}
+      >
+        <Form
+          form={exportRangeForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            try {
+              setSavingExportSettings(true);
+              const payload = {
+                exportCycleDay: values.exportCycleDay
+              };
+              const response = await api.put<User>("/me/export-range", payload);
+              const userRange = getExportRangeFromUser(response.data);
+              if (userRange) {
+                setRange(userRange);
+              } else {
+                setRange(getDefaultRange());
+              }
+              setExportSettingsOpen(false);
+              message.success("默认导出范围已保存");
+              await refreshUser();
+            } catch (error: unknown) {
+              message.error(getErrorMessage(error));
+            } finally {
+              setSavingExportSettings(false);
+            }
+          }}
+        >
+          <Form.Item
+            label="每月几号"
+            name="exportCycleDay"
+            rules={[{ required: true, message: "请输入每月几号" }]}
+            extra="例如填写 10：5 月 20 日导出默认是 4 月 11 日到 5 月 10 日；5 月 4 日导出默认是 4 月 11 日到 5 月 4 日"
+          >
+            <InputNumber min={1} max={31} precision={0} style={{ width: "100%" }} placeholder="请输入 1 到 31" />
           </Form.Item>
         </Form>
       </Modal>

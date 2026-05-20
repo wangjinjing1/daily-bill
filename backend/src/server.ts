@@ -1,5 +1,5 @@
 import { app } from "./app.js";
-import { ensureSuperAdmin } from "./bootstrap.js";
+import { ensureSuperAdmin, ensureUserExportRangeColumns } from "./bootstrap.js";
 import { config } from "./config.js";
 import { sequelize } from "./db.js";
 import "./models.js";
@@ -7,6 +7,7 @@ import "./models.js";
 async function bootstrap() {
   await sequelize.authenticate();
   await sequelize.sync();
+  await ensureUserExportRangeColumns();
   await ensureSuperAdmin(config.superAdminUsername, config.superAdminPassword);
 
   app.listen(config.port, () => {

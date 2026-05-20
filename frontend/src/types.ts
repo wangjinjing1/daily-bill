@@ -3,6 +3,9 @@ export type User = {
   username: string;
   role: "SUPER_ADMIN" | "USER";
   status?: "ENABLED" | "DISABLED";
+  exportCycleDay?: number | null;
+  exportStartDate?: string | null;
+  exportEndDate?: string | null;
 };
 
 export type BillType = {

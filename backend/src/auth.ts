@@ -24,8 +24,7 @@ export function signToken(user: User) {
       username: user.username,
       role: user.role
     } satisfies AuthPayload,
-    config.jwtSecret,
-    { expiresIn: "7d" }
+    config.jwtSecret
   );
 }
 
