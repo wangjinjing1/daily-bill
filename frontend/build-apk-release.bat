@@ -5,20 +5,8 @@ cd /d "%~dp0"
 echo ============================================
 echo Daily Bill Android APK Release Build
 echo ============================================
-echo.
-echo Please enter your backend API URL.
-echo Example: Please enter your backend service address
-echo.
-set /p API_URL=Enter API URL: 
 
-if "%API_URL%"=="" (
-  echo API URL is required for release build.
-  echo.
-  pause
-  exit /b 1
-)
-
-powershell -ExecutionPolicy Bypass -File ".\scripts\build-android.ps1" -BuildType release -ApiBaseUrl "%API_URL%"
+powershell -ExecutionPolicy Bypass -File ".\scripts\build-android.ps1" -BuildType release -PromptForInput
 
 echo.
 if errorlevel 1 (

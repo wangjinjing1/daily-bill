@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
-    "apk:debug": "powershell -ExecutionPolicy Bypass -File ./scripts/build-android.ps1 -BuildType debug",
-    "apk:release": "powershell -ExecutionPolicy Bypass -File ./scripts/build-android.ps1 -BuildType release"
+    "apk:debug": "powershell -ExecutionPolicy Bypass -File ./scripts/build-android.ps1 -BuildType debug -PromptForInput",
+    "apk:release": "powershell -ExecutionPolicy Bypass -File ./scripts/build-android.ps1 -BuildType release -PromptForInput"
   },
   "dependencies": {
     "@capacitor/core": "^7.2.0",
