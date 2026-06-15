@@ -238,6 +238,12 @@ function Get-VersionedApkName {
   return "$appDisplayName-$VersionName-debug.apk"
 }
 
+function Get-ApkArchiveDir {
+  param([string]$BuildType)
+
+  return Join-Path $projectRoot "apks\$BuildType"
+}
+
 function Assert-AndroidJdk {
   $javacCommand = Get-JavacCommandInfo
   if (-not $javacCommand) {
@@ -485,7 +491,9 @@ try {
   }
 
   $versionedApkName = Get-VersionedApkName -BuildType $BuildType -VersionName $resolvedVersionName
-  $versionedApkPath = Join-Path $apkOutputDir $versionedApkName
+  $apkArchiveDir = Get-ApkArchiveDir -BuildType $BuildType
+  New-Item -ItemType Directory -Force -Path $apkArchiveDir | Out-Null
+  $versionedApkPath = Join-Path $apkArchiveDir $versionedApkName
   $finalVersionedApkPath = Get-AvailableApkPath -Path $versionedApkPath
   $preferredApkName = if ($BuildType -eq "release") { $versionedApkName } else { "app-debug.apk" }
   $preferredApkPath = Join-Path $apkOutputDir $preferredApkName
