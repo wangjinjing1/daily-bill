@@ -28,10 +28,15 @@ type LedgerResponse = {
   total: number;
   page: number;
   pageSize: number;
+  summaryAmount: string;
 };
 
 type ExportRangeForm = {
   exportCycleDay?: number;
+};
+
+type LedgerRow = BillEntry & {
+  isSummary?: boolean;
 };
 
 function getErrorMessage(error: unknown) {
@@ -97,7 +102,7 @@ export function LedgerPage() {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [types, setTypes] = useState<BillType[]>([]);
-  const [data, setData] = useState<LedgerResponse>({ items: [], total: 0, page: 1, pageSize: 10 });
+  const [data, setData] = useState<LedgerResponse>({ items: [], total: 0, page: 1, pageSize: 10, summaryAmount: "0.00" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -107,6 +112,8 @@ export function LedgerPage() {
   const [range, setRange] = useState<[Dayjs, Dayjs]>(getDefaultRange());
   const [queryTypeId, setQueryTypeId] = useState<number | undefined>();
   const [queryDates, setQueryDates] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [queryMinAmount, setQueryMinAmount] = useState<number | null>(null);
+  const [queryMaxAmount, setQueryMaxAmount] = useState<number | null>(null);
   const [exportSettingsOpen, setExportSettingsOpen] = useState(false);
   const [savingExportSettings, setSavingExportSettings] = useState(false);
 
@@ -130,7 +137,9 @@ export function LedgerPage() {
           pageSize: targetPageSize,
           typeId: queryTypeId,
           startDate: queryDates?.[0]?.format("YYYY-MM-DD"),
-          endDate: queryDates?.[1]?.format("YYYY-MM-DD")
+          endDate: queryDates?.[1]?.format("YYYY-MM-DD"),
+          minAmount: queryMinAmount ?? undefined,
+          maxAmount: queryMaxAmount ?? undefined
         }
       });
       setData(response.data);
@@ -141,8 +150,7 @@ export function LedgerPage() {
 
   useEffect(() => {
     void loadTypes();
-    void refreshUser();
-  }, [refreshUser]);
+  }, []);
 
   useEffect(() => {
     void loadBills(page, pageSize);
@@ -183,13 +191,29 @@ export function LedgerPage() {
     setExportSettingsOpen(true);
   };
 
-  const columns: ColumnsType<BillEntry> = [
+  const tableData = useMemo<LedgerRow[]>(
+    () => [
+      {
+        id: -1,
+        userId: 0,
+        billTypeId: 0,
+        occurredOn: "-",
+        amount: data.summaryAmount,
+        note: "查询条件内金额合计",
+        isSummary: true
+      },
+      ...data.items
+    ],
+    [data.items, data.summaryAmount]
+  );
+
+  const columns: ColumnsType<LedgerRow> = [
     { title: "日期", dataIndex: "occurredOn", key: "occurredOn", width: 120 },
     {
       title: "记账类型",
       key: "billType",
       width: 120,
-      render: (_, record) => <Tag color="green">{record.billType?.name ?? "-"}</Tag>
+      render: (_, record) => <Tag color={record.isSummary ? "blue" : "green"}>{record.isSummary ? "汇总" : record.billType?.name ?? "-"}</Tag>
     },
     {
       title: "金额(元)",
@@ -204,7 +228,7 @@ export function LedgerPage() {
       key: "actions",
       width: 160,
       fixed: isMobile ? undefined : "right",
-      render: (_, record) => (
+      render: (_, record) => record.isSummary ? null : (
         <Space size="small">
           <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)}>
             编辑
@@ -304,6 +328,22 @@ export function LedgerPage() {
             onChange={(value) => setQueryTypeId(value)}
             options={enabledTypes.map((item) => ({ label: item.name, value: item.id }))}
           />
+          <InputNumber
+            min={0}
+            precision={2}
+            placeholder="最小金额"
+            className="query-amount"
+            value={queryMinAmount}
+            onChange={(value) => setQueryMinAmount(value)}
+          />
+          <InputNumber
+            min={0}
+            precision={2}
+            placeholder="最大金额"
+            className="query-amount"
+            value={queryMaxAmount}
+            onChange={(value) => setQueryMaxAmount(value)}
+          />
           <Button
             type="primary"
             icon={<SearchOutlined />}
@@ -318,6 +358,8 @@ export function LedgerPage() {
             onClick={async () => {
               setQueryDates(null);
               setQueryTypeId(undefined);
+              setQueryMinAmount(null);
+              setQueryMaxAmount(null);
               setPage(1);
               setTimeout(() => {
                 void loadBills(1, pageSize);
@@ -331,7 +373,7 @@ export function LedgerPage() {
         <Table
           rowKey="id"
           loading={loading}
-          dataSource={data.items}
+          dataSource={tableData}
           columns={columns}
           scroll={{ x: 780 }}
           pagination={{

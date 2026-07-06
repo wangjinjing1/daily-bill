@@ -1,4 +1,4 @@
-import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useState } from "react";
 import { api, getToken, setToken } from "./api";
 import { User } from "./types";
 
@@ -16,7 +16,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     if (!getToken()) {
       setUser(null);
       setLoading(false);
@@ -32,11 +32,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void refreshUser();
-  }, []);
+  }, [refreshUser]);
 
   const login = async (username: string, password: string) => {
     const response = await api.post<{ token: string; user: User }>("/auth/login", { username, password });
