@@ -41,6 +41,13 @@ type LedgerRow = BillEntry & {
   isSummary?: boolean;
 };
 
+type BillQueryFilters = {
+  dates?: [Dayjs | null, Dayjs | null] | null;
+  typeId?: number | null;
+  minAmount?: number | null;
+  maxAmount?: number | null;
+};
+
 function getErrorMessage(error: unknown) {
   if (
     typeof error === "object" &&
@@ -74,6 +81,26 @@ function getExportRangeFromUser(user?: User | null): [Dayjs, Dayjs] | null {
   }
 
   return [start, end];
+}
+
+function getQueryRangeFromUser(user?: User | null): [Dayjs, Dayjs] | null {
+  if (!user?.exportCycleDay) {
+    return null;
+  }
+
+  const cycleDay = user.exportCycleDay;
+  const today = dayjs();
+  const currentCycleDay = today.startOf("month").date(Math.min(cycleDay, today.daysInMonth()));
+
+  if (today.isSame(currentCycleDay, "day") || today.isBefore(currentCycleDay, "day")) {
+    const previousMonth = today.subtract(1, "month");
+    const previousCycleDay = previousMonth.startOf("month").date(Math.min(cycleDay, previousMonth.daysInMonth()));
+    return [previousCycleDay.add(1, "day"), currentCycleDay];
+  }
+
+  const nextMonth = today.add(1, "month");
+  const nextCycleDay = nextMonth.startOf("month").date(Math.min(cycleDay, nextMonth.daysInMonth()));
+  return [currentCycleDay.add(1, "day"), nextCycleDay];
 }
 
 function MobileDateRange({
@@ -173,18 +200,23 @@ export function LedgerPage() {
     setTypes(response.data);
   };
 
-  const loadBills = async (targetPage = page, targetPageSize = pageSize) => {
+  const loadBills = async (targetPage = page, targetPageSize = pageSize, filters?: BillQueryFilters) => {
+    const dates = filters && "dates" in filters ? filters.dates : queryDates;
+    const typeId = filters && "typeId" in filters ? filters.typeId : queryTypeId;
+    const minAmount = filters && "minAmount" in filters ? filters.minAmount : queryMinAmount;
+    const maxAmount = filters && "maxAmount" in filters ? filters.maxAmount : queryMaxAmount;
+
     setLoading(true);
     try {
       const response = await api.get<LedgerResponse>("/bills", {
         params: {
           page: targetPage,
           pageSize: targetPageSize,
-          typeId: queryTypeId,
-          startDate: queryDates?.[0]?.format("YYYY-MM-DD"),
-          endDate: queryDates?.[1]?.format("YYYY-MM-DD"),
-          minAmount: queryMinAmount ?? undefined,
-          maxAmount: queryMaxAmount ?? undefined
+          typeId: typeId ?? undefined,
+          startDate: dates?.[0]?.format("YYYY-MM-DD"),
+          endDate: dates?.[1]?.format("YYYY-MM-DD"),
+          minAmount: minAmount ?? undefined,
+          maxAmount: maxAmount ?? undefined
         }
       });
       setData(response.data);
@@ -204,6 +236,10 @@ export function LedgerPage() {
   useEffect(() => {
     const userRange = getExportRangeFromUser(user);
     setRange(userRange ?? getDefaultRange());
+    const queryRange = getQueryRangeFromUser(user) ?? getDefaultRange();
+    setQueryDates(queryRange);
+    setPage(1);
+    void loadBills(1, pageSize, { dates: queryRange });
   }, [user?.exportCycleDay]);
 
   const openCreateModal = () => {
@@ -396,14 +432,18 @@ export function LedgerPage() {
           </Button>
           <Button
             onClick={async () => {
-              setQueryDates(null);
+              const queryRange = getQueryRangeFromUser(user) ?? getDefaultRange();
+              setQueryDates(queryRange);
               setQueryTypeId(undefined);
               setQueryMinAmount(null);
               setQueryMaxAmount(null);
               setPage(1);
-              setTimeout(() => {
-                void loadBills(1, pageSize);
-              }, 0);
+              await loadBills(1, pageSize, {
+                dates: queryRange,
+                typeId: null,
+                minAmount: null,
+                maxAmount: null
+              });
             }}
           >
             重置
