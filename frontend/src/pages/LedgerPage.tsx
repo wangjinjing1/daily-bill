@@ -18,7 +18,7 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { Dayjs } from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { exportFilePlugin } from "../exportFilePlugin";
@@ -173,6 +173,7 @@ export function LedgerPage() {
   const { user, refreshUser } = useAuth();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
+  const initialQueryDates = getQueryRangeFromUser(user) ?? getDefaultRange();
   const [types, setTypes] = useState<BillType[]>([]);
   const [data, setData] = useState<LedgerResponse>({ items: [], total: 0, page: 1, pageSize: 10, summaryAmount: "0.00" });
   const [page, setPage] = useState(1);
@@ -183,11 +184,12 @@ export function LedgerPage() {
   const [editingEntry, setEditingEntry] = useState<BillEntry | null>(null);
   const [range, setRange] = useState<[Dayjs, Dayjs]>(getDefaultRange());
   const [queryTypeId, setQueryTypeId] = useState<number | undefined>();
-  const [queryDates, setQueryDates] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [queryDates, setQueryDates] = useState<[Dayjs | null, Dayjs | null] | null>(() => initialQueryDates);
   const [queryMinAmount, setQueryMinAmount] = useState<number | null>(null);
   const [queryMaxAmount, setQueryMaxAmount] = useState<number | null>(null);
   const [exportSettingsOpen, setExportSettingsOpen] = useState(false);
   const [savingExportSettings, setSavingExportSettings] = useState(false);
+  const hasSyncedInitialQueryRange = useRef(false);
 
   const enabledTypes = useMemo(() => types.filter((item) => item.enabled), [types]);
   const preferredBillTypeId = useMemo(() => {
@@ -239,7 +241,11 @@ export function LedgerPage() {
     const queryRange = getQueryRangeFromUser(user) ?? getDefaultRange();
     setQueryDates(queryRange);
     setPage(1);
-    void loadBills(1, pageSize, { dates: queryRange });
+    if (hasSyncedInitialQueryRange.current) {
+      void loadBills(1, pageSize, { dates: queryRange });
+    } else {
+      hasSyncedInitialQueryRange.current = true;
+    }
   }, [user?.exportCycleDay]);
 
   const openCreateModal = () => {
