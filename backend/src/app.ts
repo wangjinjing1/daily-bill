@@ -280,6 +280,8 @@ app.get(
     const typeId = req.query.typeId ? Number(req.query.typeId) : undefined;
     const startDate = req.query.startDate ? String(req.query.startDate) : undefined;
     const endDate = req.query.endDate ? String(req.query.endDate) : undefined;
+    const minAmount = req.query.minAmount ? assertAmount(req.query.minAmount) : undefined;
+    const maxAmount = req.query.maxAmount ? assertAmount(req.query.maxAmount) : undefined;
     const where: Record<string, unknown> = { userId: user.id };
     if (typeId) {
       where.billTypeId = typeId;
@@ -297,20 +299,37 @@ app.get(
         [Op.lte]: assertDate(endDate)
       };
     }
+    if (minAmount && maxAmount) {
+      where.amount = {
+        [Op.between]: [minAmount, maxAmount]
+      };
+    } else if (minAmount) {
+      where.amount = {
+        [Op.gte]: minAmount
+      };
+    } else if (maxAmount) {
+      where.amount = {
+        [Op.lte]: maxAmount
+      };
+    }
 
-    const { rows, count } = await BillEntry.findAndCountAll({
-      where,
-      include: [{ model: BillType, as: "billType" }],
-      order: [["occurredOn", "DESC"], ["id", "DESC"]],
-      offset: (page - 1) * pageSize,
-      limit: pageSize
-    });
+    const [{ rows, count }, summaryAmount] = await Promise.all([
+      BillEntry.findAndCountAll({
+        where,
+        include: [{ model: BillType, as: "billType" }],
+        order: [["occurredOn", "DESC"], ["id", "DESC"]],
+        offset: (page - 1) * pageSize,
+        limit: pageSize
+      }),
+      BillEntry.sum("amount", { where })
+    ]);
 
     res.json({
       items: rows,
       total: count,
       page,
-      pageSize
+      pageSize,
+      summaryAmount: Number(summaryAmount ?? 0).toFixed(2)
     });
   })
 );

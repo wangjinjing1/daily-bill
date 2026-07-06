@@ -135,6 +135,10 @@ body {
   min-width: 180px;
 }
 
+.query-amount {
+  width: 140px;
+}
+
 .login-page {
   min-height: 100vh;
   display: flex;
@@ -218,6 +222,10 @@ body {
 
   .query-select {
     min-width: 0;
+    width: 100%;
+  }
+
+  .query-amount {
     width: 100%;
   }
 
