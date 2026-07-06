@@ -415,6 +415,27 @@ function Read-OptionalInput {
   return $DefaultValue
 }
 
+function Read-RequiredVersionName {
+  param([string]$SuggestedValue)
+
+  while ($true) {
+    $value = Read-Host "Version name (required, suggested: $SuggestedValue)"
+    $trimmedValue = $value.Trim()
+
+    if (-not $trimmedValue) {
+      Write-Host "Version name is required. Use semantic version format, for example: $SuggestedValue"
+      continue
+    }
+
+    try {
+      Assert-VersionName -InputValue $trimmedValue
+      return $trimmedValue
+    } catch {
+      Write-Host $_.Exception.Message
+    }
+  }
+}
+
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
@@ -430,9 +451,9 @@ $defaultVersionName = Get-NextPatchVersion -CurrentVersion $currentVersionName
 if ($PromptForInput) {
   Write-Host ""
   Write-Host "Android build settings"
-  Write-Host "Press Enter to use the value shown in brackets."
+  Write-Host "Press Enter to use the default API URL. Version name must be entered explicitly."
   $ApiBaseUrl = Read-OptionalInput -Prompt "Backend API URL" -DefaultValue $defaultApiUrl
-  $VersionName = Read-OptionalInput -Prompt "Version name" -DefaultValue $defaultVersionName
+  $VersionName = Read-RequiredVersionName -SuggestedValue $defaultVersionName
 }
 
 $apiUrl = Normalize-ApiBaseUrl -InputValue (Resolve-ApiBaseUrl -InputValue $ApiBaseUrl)
