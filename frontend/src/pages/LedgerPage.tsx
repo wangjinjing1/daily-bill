@@ -18,7 +18,7 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { Dayjs } from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { BillEntry, BillType, User } from "../types";
@@ -37,6 +37,13 @@ type ExportRangeForm = {
 
 type LedgerRow = BillEntry & {
   isSummary?: boolean;
+};
+
+type BillQueryFilters = {
+  dates?: [Dayjs | null, Dayjs | null] | null;
+  typeId?: number | null;
+  minAmount?: number | null;
+  maxAmount?: number | null;
 };
 
 function getErrorMessage(error: unknown) {
@@ -75,6 +82,26 @@ function getExportRangeFromUser(user?: User | null): [Dayjs, Dayjs] | null {
   return [start, end];
 }
 
+function getQueryRangeFromUser(user?: User | null): [Dayjs, Dayjs] | null {
+  if (!user?.exportCycleDay) {
+    return null;
+  }
+
+  const cycleDay = user.exportCycleDay;
+  const today = dayjs();
+  const currentCycleDay = today.startOf("month").date(Math.min(cycleDay, today.daysInMonth()));
+
+  if (today.isSame(currentCycleDay, "day") || today.isBefore(currentCycleDay, "day")) {
+    const previousMonth = today.subtract(1, "month");
+    const previousCycleDay = previousMonth.startOf("month").date(Math.min(cycleDay, previousMonth.daysInMonth()));
+    return [previousCycleDay.add(1, "day"), currentCycleDay];
+  }
+
+  const nextMonth = today.add(1, "month");
+  const nextCycleDay = nextMonth.startOf("month").date(Math.min(cycleDay, nextMonth.daysInMonth()));
+  return [currentCycleDay.add(1, "day"), nextCycleDay];
+}
+
 function MobileDateRange({
   value,
   onChange,
@@ -98,7 +125,7 @@ function MobileDateRange({
 export function LedgerPage() {
   const [form] = Form.useForm();
   const [exportRangeForm] = Form.useForm<ExportRangeForm>();
-  const { user, refreshUser } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [types, setTypes] = useState<BillType[]>([]);
@@ -116,6 +143,7 @@ export function LedgerPage() {
   const [queryMaxAmount, setQueryMaxAmount] = useState<number | null>(null);
   const [exportSettingsOpen, setExportSettingsOpen] = useState(false);
   const [savingExportSettings, setSavingExportSettings] = useState(false);
+  const hasSkippedInitialQueryRangeSync = useRef(false);
 
   const enabledTypes = useMemo(() => types.filter((item) => item.enabled), [types]);
   const preferredBillTypeId = useMemo(() => {
@@ -128,18 +156,23 @@ export function LedgerPage() {
     setTypes(response.data);
   };
 
-  const loadBills = async (targetPage = page, targetPageSize = pageSize) => {
+  const loadBills = async (targetPage = page, targetPageSize = pageSize, filters?: BillQueryFilters) => {
+    const dates = filters && "dates" in filters ? filters.dates : queryDates;
+    const typeId = filters && "typeId" in filters ? filters.typeId : queryTypeId;
+    const minAmount = filters && "minAmount" in filters ? filters.minAmount : queryMinAmount;
+    const maxAmount = filters && "maxAmount" in filters ? filters.maxAmount : queryMaxAmount;
+
     setLoading(true);
     try {
       const response = await api.get<LedgerResponse>("/bills", {
         params: {
           page: targetPage,
           pageSize: targetPageSize,
-          typeId: queryTypeId,
-          startDate: queryDates?.[0]?.format("YYYY-MM-DD"),
-          endDate: queryDates?.[1]?.format("YYYY-MM-DD"),
-          minAmount: queryMinAmount ?? undefined,
-          maxAmount: queryMaxAmount ?? undefined
+          typeId: typeId ?? undefined,
+          startDate: dates?.[0]?.format("YYYY-MM-DD"),
+          endDate: dates?.[1]?.format("YYYY-MM-DD"),
+          minAmount: minAmount ?? undefined,
+          maxAmount: maxAmount ?? undefined
         }
       });
       setData(response.data);
@@ -153,12 +186,31 @@ export function LedgerPage() {
   }, []);
 
   useEffect(() => {
-    void loadBills(page, pageSize);
-  }, [page, pageSize]);
+    if (authLoading) {
+      return;
+    }
+
+    const nextQueryDates = queryDates ?? getQueryRangeFromUser(user) ?? getDefaultRange();
+    if (!queryDates) {
+      setQueryDates(nextQueryDates);
+    }
+    void loadBills(page, pageSize, { dates: nextQueryDates });
+  }, [authLoading, page, pageSize]);
 
   useEffect(() => {
     const userRange = getExportRangeFromUser(user);
     setRange(userRange ?? getDefaultRange());
+    if (!authLoading) {
+      if (!hasSkippedInitialQueryRangeSync.current) {
+        hasSkippedInitialQueryRangeSync.current = true;
+        return;
+      }
+
+      const queryRange = getQueryRangeFromUser(user) ?? getDefaultRange();
+      setQueryDates(queryRange);
+      setPage(1);
+      void loadBills(1, pageSize, { dates: queryRange });
+    }
   }, [user?.exportCycleDay]);
 
   const openCreateModal = () => {
